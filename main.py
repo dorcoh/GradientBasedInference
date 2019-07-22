@@ -33,7 +33,3 @@ trainer = Trainer(model=model,
                   patience=10,
                   num_epochs=1)
 trainer.train()
-# TODO: (1) check how to init pretrained weights (or find out if already applied)
-#  (2) restrict the training to one sample each time
-#  (3) amplify the gradient with function g
-#  (4) define function g through reading the paper appendix and consulting with Roi
