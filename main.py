@@ -4,32 +4,60 @@ from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
 from allennlp.service.predictors.predictor import Predictor
 from allennlp.models.archival import load_archive
 from allennlp.training.trainer import Trainer
-from allennlp.data.dataset_readers.semantic_role_labeling import SrlReader
+
+from gbi.gradient_inference import GradientBasedInference
+from gbi.subsampled_srl_reader import SubsampledSrlReader
 import torch.optim as optim
 import os
 
+
 datapath = os.getcwd() + '/data/' + 'test'
 res = os.path.exists(datapath)
-srlReader = SrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()})
+srlReader = SubsampledSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()},
+                                num_samples=1)
 test_dataset = srlReader.read(datapath)
-
+instances = [i for i in test_dataset]
 vocab = Vocabulary.from_instances(test_dataset)
 
 archive = load_archive("srl-model-2018.05.25.tar.gz")
-predictor = Predictor.from_archive(archive)
-# result = predictor.predict_json(
-#   {"sentence": "Did Uriah honestly think he could beat the game in under three hours?"}
-# )
-#print(result)
-model = predictor._model
+original_predictor = Predictor.from_archive(archive)
+model = original_predictor._model
 
-optimizer = optim.SGD(model.parameters(), lr=0.1)
+optimizer = optim.SGD(model.parameters(), lr=0.01)
 iterator = BasicIterator(batch_size=1)
 iterator.index_with(vocab)
-trainer = Trainer(model=model,
-                  optimizer=optimizer,
-                  iterator=iterator,
-                  train_dataset=test_dataset,
-                  patience=10,
-                  num_epochs=1)
-trainer.train()
+
+
+def test():
+    trainer = Trainer(model=model,
+                      optimizer=optimizer,
+                      iterator=iterator,
+                      train_dataset=test_dataset,
+                      num_epochs=1)
+    trainer.train()
+    trained_predictor = Predictor(trainer.model, srlReader)
+
+    new = trained_predictor.predict_instance(instances[0])
+    orig = original_predictor.predict_instance(instances[0])
+
+
+def g():
+    # TODO: add constraints
+    return 1
+
+
+def gbi():
+    gbi = GradientBasedInference(model=model,
+                                 optimizer=optimizer,
+                                 iterator=iterator)
+
+    gbi.predict(test_dataset, g, iterations=10)
+
+
+def main():
+    # test()
+    gbi()
+
+
+if __name__ == '__main__':
+    main()
