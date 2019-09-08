@@ -28,14 +28,6 @@ model = CustomSemanticRoleLabeler.from_srl(original_predictor._model)
 
 
 def gbi():
-    # TODO: fix all extreme cases of loader (tree height etc.)
-    # TODO: load somehow only 'failed' instances
-    # TODO: add metrics calculator
-    # TODO: prepare for and run on server
-    # TODO: add another experiment, options:
-    #  (1) out-of-domain data (need to train special models for it)
-    #  (2) different g function with current task
-    #  (3) different g function with other task
     inst = test_instances[15]
     # init optimizer
     optimizer = optim.SGD(model.parameters(), lr=1)
