@@ -34,10 +34,9 @@ def gbi():
     gbi = GradientBasedInference(model=model,
                                  optimizer=optimizer,
                                  alpha=0)
-    for _input in iterator([inst], num_epochs=1):
-        y_hat = gbi.gradient_inference(_input, iterations=10)
-        truth = y_hat['tags'][0] == _input['metadata'][0]['gold_tags']
-        print(truth)
+    for _input in iterator(test_instances, num_epochs=1):
+        y_hat = gbi.gradient_inference(_input, iterations=15)
+        gbi.print_stats()
 
 
 def main():
