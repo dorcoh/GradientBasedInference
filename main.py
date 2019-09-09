@@ -12,7 +12,7 @@ import os
 
 
 # load data and init vocabulary
-test_datapath = os.getcwd() + '/data/' + 'failed'
+test_datapath = os.getcwd() + '/data/' + 'test'
 srlReader = CustomSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()},
                             num_samples=None)
 test_dataset = srlReader.subsampled_read(test_datapath)
@@ -28,7 +28,13 @@ model = CustomSemanticRoleLabeler.from_srl(original_predictor._model)
 
 
 def gbi():
-    inst = test_instances[15]
+    # TODO: load somehow only 'failed' instances
+    # TODO: add metrics calculator (success/failure rate in fixing outputs)
+    # TODO: add another experiment, options:
+    #  (1) out-of-domain data (need to train special models for it)
+    #  (2) different g function with current task
+    #  (3) different g function with other task
+    # inst = test_instances[15]
     # init optimizer
     optimizer = optim.SGD(model.parameters(), lr=1)
     gbi = GradientBasedInference(model=model,
