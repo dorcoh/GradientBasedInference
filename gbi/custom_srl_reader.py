@@ -43,17 +43,13 @@ class CustomSrlReader(SrlReader):
             logger.info("Filtering to only include file paths containing the %s domain", self._domain_identifier)
 
         for sentence in self._ontonotes_subset(ontonotes_reader, file_path, self._domain_identifier):
-            # TODO: check if need to collect spans from leaf nodes too (height <= 3),
-            #  should check by searching for cases where spans set does not contain all leaves
-            #  with size == 1
             spans = set()
-            # TODO: align with whos using the 'spans' for cases without parse tree (empty set)
             try:
                 words_indices_dict = {w: i for i, w in enumerate(sentence.parse_tree.leaves())}
                 # TODO: check how to output indices instead of words
                 #  (for extreme cases where different tuples could match)
                 for subtree in sentence.parse_tree.subtrees():
-                    if subtree.height() > 3:
+                    if subtree.height() > 0:
                         spans.add(tuple(subtree.leaves()))
             except:
                 pass
