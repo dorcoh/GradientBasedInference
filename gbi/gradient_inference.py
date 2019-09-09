@@ -100,10 +100,10 @@ class GradientBasedInference:
                  alpha: int = 0
                  ) -> None:
 
-        self.model = model
         self.alpha = alpha
-        model_copy = deepcopy(model)
-        self.original_weights = [p for p in model_copy.parameters()]
+        self.model_copy = deepcopy(model)
+        self.model = None
+        self.original_weights = [p for p in self.model_copy.parameters()]
         self.optimizer = optimizer
         # stats for inference loop
         self.stats = {
@@ -168,6 +168,7 @@ class GradientBasedInference:
     def gradient_inference(self, x: Instance, iterations: int):
         self.stats['total'] += 1
         i = 0
+        self.model = deepcopy(self.model_copy)  # revert to original model
         y_hat = None
         while i < iterations:
             # infer
@@ -183,9 +184,7 @@ class GradientBasedInference:
                 else:
                     self.stats['fixed'] += 1
                     print("Exit loop to due to fix")
-                    print("Iteration: ", i + 1)
-                    print("Pred: ", predicted_tags)
-                    print("True: ", true_tags)
+                    self._loop_stats(i, predicted_tags, true_tags)
                 break
 
             # compute g (or skip zero g)
@@ -198,9 +197,7 @@ class GradientBasedInference:
                 print("Exit loop due to zero g function")
                 break
 
-            print("Iteration: ", i + 1)
-            print("Pred: ", predicted_tags)
-            print("True: ", true_tags)
+            self._loop_stats(i, predicted_tags, true_tags)
 
             # compute loss and update parameters
             self._parameters_update(likelihood, g_result)
@@ -210,3 +207,9 @@ class GradientBasedInference:
 
     def print_stats(self):
         print("Statistics:", self.stats)
+
+    @staticmethod
+    def _loop_stats(i, predicted_tags, true_tags):
+        print("Iteration: ", i + 1)
+        print("Pred: ", predicted_tags)
+        print("True: ", true_tags)
