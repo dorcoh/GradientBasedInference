@@ -105,6 +105,17 @@ class GradientBasedInference:
         model_copy = deepcopy(model)
         self.original_weights = [p for p in model_copy.parameters()]
         self.optimizer = optimizer
+        # stats for inference loop
+        self.stats = {
+            # true positive by initial model
+            'tp': 0,
+            # g zero
+            'gzero_start': 0,
+            'gzero_next': 0,
+            # fixed through gradient inference loop
+            'fixed': 0,
+            'total': 0
+        }
 
     def _infer(self, x):
         # Set to evaluate mode
@@ -147,7 +158,7 @@ class GradientBasedInference:
 
         loss = constraint_loss + reg_loss
 
-        print("Constraint loss: ", constraint_loss.item(), ",L1 reg loss: ", reg_loss.item(),
+        print("Constraint loss: ", constraint_loss.item(), ",Reg loss: ", reg_loss.item(),
               ", Total loss: ", loss.item())
 
         loss.backward()
@@ -155,23 +166,47 @@ class GradientBasedInference:
         self.optimizer.step()
 
     def gradient_inference(self, x: Instance, iterations: int):
+        self.stats['total'] += 1
         i = 0
         y_hat = None
         while i < iterations:
             # infer
             y_hat, likelihood = self._infer(x)
-            print("Iteration: ", i + 1, ",Tags:", y_hat['tags'])
 
-            # compute g
+            # skip true positive
+            predicted_tags = y_hat['tags'][0]
+            true_tags = x['metadata'][0]['gold_tags']
+            if predicted_tags == true_tags:
+                if i == 0:
+                    self.stats['tp'] += 1
+                    print("Exit loop due to true positive")
+                else:
+                    self.stats['fixed'] += 1
+                    print("Exit loop to due to fix")
+                    print("Iteration: ", i + 1)
+                    print("Pred: ", predicted_tags)
+                    print("True: ", true_tags)
+                break
+
+            # compute g (or skip zero g)
             g_result = g(x, y_hat)
             if torch.all(g_result == 0):
+                if i == 0:
+                    self.stats['gzero_start'] += 1
+                else:
+                    self.stats['gzero_next'] += 1
                 print("Exit loop due to zero g function")
                 break
 
+            print("Iteration: ", i + 1)
+            print("Pred: ", predicted_tags)
+            print("True: ", true_tags)
+
             # compute loss and update parameters
-            else:
-                self._parameters_update(likelihood, g_result)
-                # proceed to next iteration
-                i += 1
+            self._parameters_update(likelihood, g_result)
+            i += 1
 
         return y_hat
+
+    def print_stats(self):
+        print("Statistics:", self.stats)
