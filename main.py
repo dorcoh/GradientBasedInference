@@ -7,16 +7,30 @@ from allennlp.models.archival import load_archive
 from gbi.gradient_inference import GradientBasedInference
 from gbi.custom_semantic_role_labeler import CustomSemanticRoleLabeler
 from gbi.custom_srl_reader import CustomSrlReader
+from gbi.instances_store import load_and_deserialize
+
 import torch.optim as optim
 import os
 
+# program arguments
+load = 'test'
+store = False
+# hyper-params for gradient inference
+regularization = 0
+learning_rate = 1
+inference_iterations = 15
+# TODO: add support for program arguments
 
-# load data and init vocabulary
-test_datapath = os.getcwd() + '/data/' + 'test'
-srlReader = CustomSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()},
-                            num_samples=None)
-test_dataset = srlReader.subsampled_read(test_datapath)
-test_instances = [i for i in test_dataset]
+# load data, init vocabulary and iterator
+test_instances = []
+if load == 'test':
+    test_datapath = os.getcwd() + '/data/' + load
+    srl_reader = CustomSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()})
+    test_dataset = srl_reader.subsampled_read(test_datapath)
+    test_instances = [i for i in test_dataset]
+elif load in ['failed', 'fixed', 'gzero']:
+    test_instances = load_and_deserialize(load)
+
 vocab = Vocabulary.from_instances(test_instances)
 iterator = BasicIterator(batch_size=1)
 iterator.index_with(vocab)
@@ -28,51 +42,21 @@ model = CustomSemanticRoleLabeler.from_srl(original_predictor._model)
 
 
 def gbi():
-    # TODO: load somehow only 'failed' instances
-    # TODO: add metrics calculator (success/failure rate in fixing outputs)
-    # TODO: add another experiment, options:
-    #  (1) out-of-domain data (need to train special models for it)
-    #  (2) different g function with current task
-    #  (3) different g function with other task
-    # inst = test_instances[15]
-    # init optimizer
-    optimizer = optim.SGD(model.parameters(), lr=1)
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
     gbi = GradientBasedInference(model=model,
                                  optimizer=optimizer,
-                                 alpha=0)
+                                 alpha=regularization,
+                                 store=store)
+
     for _input in iterator(test_instances, num_epochs=1):
-        y_hat = gbi.gradient_inference(_input, iterations=15)
+        y_hat = gbi.gradient_inference(_input, iterations=inference_iterations,
+                                       num_samples=len(test_instances))
         gbi.print_stats()
 
 
 def main():
     gbi()
-    #iterate_instances()
 
 
 if __name__ == '__main__':
     main()
-
-
-# utils
-
-def iterate_instances():
-    """
-    helper for finding specific instance by conditioning on its words
-    """
-    for i, inst in enumerate(test_instances):
-        predicted = original_predictor.predict_instance(inst)
-        predicted_tags = predicted['tags']
-        truth = inst.fields['tags'].labels
-        if truth != predicted_tags:
-            print(inst.fields['tags'].labels)
-            print(original_predictor.predict_instance(inst)['tags'])
-            pass
-        print(i)
-        # words = inst['metadata'].metadata['words']
-
-        # truth = 'bus' in words and 'signs' in words
-        # if truth:
-        #     print(words)
-        # else:
-        #     continue
