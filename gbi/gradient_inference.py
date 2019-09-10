@@ -1,8 +1,10 @@
-from typing import Iterable, Callable
 import torch
 from allennlp.data import DataIterator, Instance
 from allennlp.models import Model
 from copy import deepcopy
+from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_spans
+
+from gbi.instances_store import InstanceStore
 
 
 def extract_bio_span_indices(predicted_tags):
@@ -97,7 +99,10 @@ class GradientBasedInference:
     def __init__(self,
                  model: Model,
                  optimizer: torch.optim.Optimizer,
-                 alpha: int = 0
+                 # regularization parameter
+                 alpha: int = 0,
+                 # to store instances groups (through analyze)
+                 store: bool = True
                  ) -> None:
 
         self.alpha = alpha
@@ -114,8 +119,13 @@ class GradientBasedInference:
             'gzero_next': 0,
             # fixed through gradient inference loop
             'fixed': 0,
-            'total': 0
+            # failed (passed iterations limit)
+            'fix_failed': 0,
+            'total': 0,
         }
+
+        # store pickled list of instances groups
+        self.instances_store = InstanceStore(disabled=not store)
 
     def _infer(self, x):
         # Set to evaluate mode
@@ -165,7 +175,7 @@ class GradientBasedInference:
 
         self.optimizer.step()
 
-    def gradient_inference(self, x: Instance, iterations: int):
+    def gradient_inference(self, x: Instance, iterations: int, num_samples: int):
         self.stats['total'] += 1
         i = 0
         self.model = deepcopy(self.model_copy)  # revert to original model
@@ -183,6 +193,7 @@ class GradientBasedInference:
                     print("Exit loop due to true positive")
                 else:
                     self.stats['fixed'] += 1
+                    self.instances_store.append('fixed', x)
                     print("Exit loop to due to fix")
                     self._loop_stats(i, predicted_tags, true_tags)
                 break
@@ -192,8 +203,10 @@ class GradientBasedInference:
             if torch.all(g_result == 0):
                 if i == 0:
                     self.stats['gzero_start'] += 1
+                    self.instances_store.append('gzero', x)
                 else:
                     self.stats['gzero_next'] += 1
+                    self.instances_store.append('failed', x)
                 print("Exit loop due to zero g function")
                 break
 
@@ -202,6 +215,13 @@ class GradientBasedInference:
             # compute loss and update parameters
             self._parameters_update(likelihood, g_result)
             i += 1
+
+        if i == iterations:
+            self.stats['fix_failed'] += 1
+            self.instances_store.append('failed', x)
+
+        if self.stats['total'] % 10 == 0 or self.stats['total'] == num_samples:
+            self.instances_store.update_instances_store()
 
         return y_hat
 
