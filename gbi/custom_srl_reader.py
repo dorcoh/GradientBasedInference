@@ -14,20 +14,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 class CustomSrlReader(SrlReader):
     """
-    custom srl reader with all nodes text spans inside instance.fields['metadata].metadata['spans']
-    and ability to limit number of samples
+    custom srl reader features:
+    (1) dependency parse tree nodes text spans stored in instance metadata
+    (2) limit number of samples
     """
-    def __init__(self, num_samples, **kwargs):
-        super().__init__(**kwargs)
-        if num_samples:
-            self.k = num_samples
-        else:
-            self.k = None
-
-    def subsampled_read(self, datapath):
-        if self.k is not None:
+    def subsampled_read(self, datapath, num_samples=None):
+        if num_samples is not None:
             # limit data set
-            yield from islice(self._read(datapath), self.k)
+            yield from islice(self._read(datapath), num_samples)
         else:
             # no limit
             yield from self._read(datapath)
@@ -43,24 +37,21 @@ class CustomSrlReader(SrlReader):
             logger.info("Filtering to only include file paths containing the %s domain", self._domain_identifier)
 
         for sentence in self._ontonotes_subset(ontonotes_reader, file_path, self._domain_identifier):
+
+            # skip samples without dep' parse tree
+            if not sentence.parse_tree:
+                continue
+
+            # extract dep' parse tree spans
             spans = set()
-            try:
-                words_indices_dict = {w: i for i, w in enumerate(sentence.parse_tree.leaves())}
-                # TODO: check how to output indices instead of words
-                #  (for extreme cases where different tuples could match)
-                for subtree in sentence.parse_tree.subtrees():
-                    if subtree.height() > 0:
-                        spans.add(tuple(subtree.leaves()))
-            except:
-                pass
+            for subtree in sentence.parse_tree.subtrees():
+                if subtree.height() > 0:
+                    # TODO: check how to output indices instead of words
+                    #  (for extreme cases where different tuples could match)
+                    spans.add(tuple(subtree.leaves()))
 
             tokens = [Token(t) for t in sentence.words]
-            if not sentence.srl_frames:
-                # Sentence contains no predicates.
-                tags = ["O" for _ in tokens]
-                verb_label = [0 for _ in tokens]
-                yield self.text_to_instance_with_spans(tokens, verb_label, tags, spans)
-            else:
+            if sentence.srl_frames:
                 for (_, tags) in sentence.srl_frames:
                     verb_indicator = [1 if label[-2:] == "-V" else 0 for label in tags]
                     yield self.text_to_instance_with_spans(tokens, verb_indicator, tags, spans)
@@ -71,4 +62,3 @@ class CustomSrlReader(SrlReader):
         metadata_dict['spans'] = spans
         instance.fields['metadata'] = MetadataField(metadata_dict)
         return Instance(instance.fields)
-
