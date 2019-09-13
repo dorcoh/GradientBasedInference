@@ -8,13 +8,13 @@ from gbi.custom_srl_reader import CustomSrlReader
 
 def deserialize(line):
     """deserialize a stringified SRL Instance"""
-    srlReader = CustomSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()})
+    srl_reader = CustomSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()})
     l_d = jsonpickle.loads(line.rstrip('\n'))
     tokens = [Token(t) for t in l_d['metadata'][0]['words']]
     verb_indicator = l_d['verb_indicator'].tolist()[0]
     tags = l_d['metadata'][0]['gold_tags']
     spans = l_d['metadata'][0]['spans']
-    inst = srlReader.text_to_instance_with_spans(tokens=tokens, verb_indicator=verb_indicator,
+    inst = srl_reader.text_to_instance_with_spans(tokens=tokens, verb_indicator=verb_indicator,
                                                  tags=tags, spans=spans)
     return inst
 
