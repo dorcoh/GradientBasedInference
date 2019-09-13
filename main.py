@@ -9,7 +9,6 @@ from gbi.custom_semantic_role_labeler import CustomSemanticRoleLabeler
 from gbi.custom_srl_reader import CustomSrlReader
 from gbi.instances_store import load_and_deserialize
 
-import torch.optim as optim
 import os
 
 # program arguments
@@ -42,12 +41,10 @@ model = CustomSemanticRoleLabeler.from_srl(original_predictor._model)
 
 
 def gbi():
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
     gbi = GradientBasedInference(model=model,
-                                 optimizer=optimizer,
+                                 learning_rate=learning_rate,
                                  alpha=regularization,
                                  store=store)
-
     for _input in iterator(test_instances, num_epochs=1):
         y_hat = gbi.gradient_inference(_input, iterations=inference_iterations,
                                        num_samples=len(test_instances))
