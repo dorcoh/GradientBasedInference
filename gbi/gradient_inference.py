@@ -6,6 +6,8 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_s
 
 from gbi.instances_store import InstanceStore
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
 
 def extract_bio_span_indices(predicted_tags):
     if predicted_tags[0]:
@@ -98,9 +100,9 @@ def g(x, y_hat):
 class GradientBasedInference:
     def __init__(self,
                  model: Model,
-                 optimizer: torch.optim.Optimizer,
+                 learning_rate: float = 1e-3,
                  # regularization parameter
-                 alpha: int = 0,
+                 alpha: float = 0,
                  # to store instances groups (through analyze)
                  store: bool = True
                  ) -> None:
@@ -109,7 +111,8 @@ class GradientBasedInference:
         self.model_copy = deepcopy(model)
         self.model = None
         self.original_weights = [p for p in self.model_copy.parameters()]
-        self.optimizer = optimizer
+        self.learning_rate = learning_rate
+        self.optimizer = None
         # stats for inference loop
         self.stats = {
             # true positive by initial model
@@ -144,10 +147,25 @@ class GradientBasedInference:
     def _compute_regularization(self):
         """regularization: difference between original and new weights"""
         reg = torch.tensor(0.0)
+        if self.alpha == 0:
+            return reg
+
+        orig_tensor = torch.Tensor().to(device)
+        new_tensor = torch.Tensor().to(device)
         for orig_param, new_param in zip(self.original_weights, self.model.parameters()):
-            diff = new_param - orig_param
-            if torch.any(diff != 0.0):
-                reg += torch.sum(torch.abs(diff) / torch.norm(diff, 2))
+            orig_flat = orig_param.reshape(-1)
+            new_flat = new_param.reshape(-1)
+            orig_tensor = torch.cat([orig_tensor, orig_flat])
+            new_tensor = torch.cat([new_tensor, new_flat])
+            # diff = new_param - orig_param
+            # if torch.any(diff != 0.0):
+            #     reg += torch.sum(torch.abs(diff) / torch.norm(diff, 2))
+
+        diff = torch.abs(orig_tensor - new_tensor)
+        if torch.all(diff == 0):
+            return reg
+
+        reg += torch.sum(diff / torch.norm(diff, 2))
 
         return reg
 
@@ -178,7 +196,10 @@ class GradientBasedInference:
     def gradient_inference(self, x: Instance, iterations: int, num_samples: int):
         self.stats['total'] += 1
         i = 0
-        self.model = deepcopy(self.model_copy)  # revert to original model
+        # revert to original model and init optimizer
+        self.model = deepcopy(self.model_copy)
+        self.model = self.model.to(device)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         y_hat = None
         while i < iterations:
             # infer
