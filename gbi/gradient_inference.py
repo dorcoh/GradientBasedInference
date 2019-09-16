@@ -6,8 +6,6 @@ from allennlp.data.dataset_readers.dataset_utils.span_utils import bio_tags_to_s
 
 from gbi.instances_store import InstanceStore
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
 
 def extract_bio_span_indices(predicted_tags):
     if predicted_tags[0]:
@@ -145,27 +143,24 @@ class GradientBasedInference:
         return y_hat, likelihood
 
     def _compute_regularization(self):
-        """regularization: difference between original and new weights"""
+        """regularization: normalized difference between original and new weights"""
         reg = torch.tensor(0.0)
+        norm = torch.tensor(0.0)
+
         if self.alpha == 0:
             return reg
 
-        orig_tensor = torch.Tensor().to(device)
-        new_tensor = torch.Tensor().to(device)
         for orig_param, new_param in zip(self.original_weights, self.model.parameters()):
             orig_flat = orig_param.reshape(-1)
             new_flat = new_param.reshape(-1)
-            orig_tensor = torch.cat([orig_tensor, orig_flat])
-            new_tensor = torch.cat([new_tensor, new_flat])
-            # diff = new_param - orig_param
-            # if torch.any(diff != 0.0):
-            #     reg += torch.sum(torch.abs(diff) / torch.norm(diff, 2))
+            diff = torch.abs(orig_flat-new_flat)
+            reg += torch.sum(diff)
+            norm += torch.sum(diff**2)
 
-        diff = torch.abs(orig_tensor - new_tensor)
-        if torch.all(diff == 0):
+        if torch.eq(reg, 0.0):
             return reg
 
-        reg += torch.sum(diff / torch.norm(diff, 2))
+        reg = reg / torch.sqrt(norm)
 
         return reg
 
@@ -198,7 +193,6 @@ class GradientBasedInference:
         i = 0
         # revert to original model and init optimizer
         self.model = deepcopy(self.model_copy)
-        self.model = self.model.to(device)
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         y_hat = None
         while i < iterations:
