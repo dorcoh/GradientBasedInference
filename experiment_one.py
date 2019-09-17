@@ -16,8 +16,9 @@ for i in iterations:
             start = timer()
             params = (data, l, r, i)
             print("Exp ", params)
-            command = "python -u main.py --load %s -l %f -a %f -i %d " % params
-            command += "> logs_exp_one/out_lr_%f_reg_%f_it_%d " % (l, r, i)
+            command = "python -u main.py --load %s -l %.20f -a %.20f -i %d " % params
+            command += "> logs_exp_one/out_lr_%.20f_reg_%.20f_it_%d " % (l, r, i)
+            print(command)
             os.system(command)
             end = timer()
             print("Time: ", end-start)

@@ -1,0 +1,6 @@
+sudo apt-get install python3.6 python3.6-dev pip3 virtualenv
+pip install -r requirements
+
+wget https://allennlp.s3.amazonaws.com/models/srl-model-2018.05.25.tar.gz
+
+download data
