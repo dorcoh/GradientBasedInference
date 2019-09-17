@@ -164,3 +164,8 @@ class GradientBasedInference:
         print("Iteration: ", i + 1)
         print("Pred: ", predicted_tags)
         print("True: ", true_tags)
+
+    def append_stats(self, args):
+        """append stats to disk"""
+        with open('stats.txt', 'a') as handle:
+            handle.write("%s, %s\n" % (str(args), str(self.stats)))

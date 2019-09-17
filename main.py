@@ -56,6 +56,8 @@ def main():
                                        num_samples=len(instances), verbose=verbose)
         gbi.print_stats()
 
+    gbi.append_stats(args)
+
 
 if __name__ == '__main__':
     main()
