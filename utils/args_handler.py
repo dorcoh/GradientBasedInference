@@ -11,7 +11,7 @@ def get_args():
     parser.add_argument('--store', action='store_true',
                         help="store on disk samples groups in pickle files, according to their classified group: "
                              "fixed/failed/gzero")
-    parser.add_argument('-l', action='store', default=1e-3, type=float, help="learning rate")
+    parser.add_argument('-l', action='store', default=1, type=float, help="learning rate")
     parser.add_argument('-i', action='store', default=15, type=int, help="number of gradient inference iterations")
     parser.add_argument('-a', action='store', default=0, type=float, help="regularization parameter")
     args = parser.parse_args()

@@ -45,14 +45,14 @@ def main():
     original_predictor = Predictor.from_archive(archive)
     model = CustomSemanticRoleLabeler.from_srl(original_predictor._model)
 
-    # invoke inference method
+    # init and invoke inference method
     gbi = GradientBasedInference(model=model,
                                  learning_rate=learning_rate,
                                  alpha=regularization,
                                  store=store)
     for instance in iterator(instances, num_epochs=1):
         y_hat = gbi.gradient_inference(instance, iterations=inference_iterations,
-                                       num_samples=len(instances))
+                                       num_samples=len(instances), verbose=True)
         gbi.print_stats()
 
 

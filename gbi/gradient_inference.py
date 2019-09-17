@@ -1,5 +1,4 @@
 import torch
-from allennlp.data import Instance
 from allennlp.models import Model
 from copy import deepcopy
 from warnings import warn
@@ -101,7 +100,7 @@ class GradientBasedInference:
 
         self.optimizer.step()
 
-    def gradient_inference(self, x, iterations, num_samples):
+    def gradient_inference(self, x, iterations, num_samples, verbose=False):
         self.stats['total'] += 1
         i = 0
         # revert to original model and init optimizer
@@ -130,7 +129,7 @@ class GradientBasedInference:
                 break
 
             # compute g (or skip zero g)
-            g_result = g(x, y_hat)
+            g_result = g(x, y_hat, verbose)
             if torch.all(g_result == 0):
                 if i == 0:
                     self.stats['gzero_start'] += 1
