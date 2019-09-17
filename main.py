@@ -1,58 +1,59 @@
 from allennlp.data import Vocabulary
 from allennlp.data.iterators import BasicIterator
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
-from allennlp.service.predictors.predictor import Predictor
+from allennlp.predictors.predictor import Predictor
 from allennlp.models.archival import load_archive
 
 from gbi.gradient_inference import GradientBasedInference
 from gbi.custom_semantic_role_labeler import CustomSemanticRoleLabeler
 from gbi.custom_srl_reader import CustomSrlReader
 from gbi.instances_store import load_and_deserialize
+from utils.args_handler import get_args
 
 import os
 
-# program arguments
-load = 'test'
-store = False
-# hyper-params for gradient inference
-regularization = 0
-learning_rate = 1
-inference_iterations = 15
-# TODO: add support for program arguments
 
-# load data, init vocabulary and iterator
-test_instances = []
-if load == 'test':
-    test_datapath = os.getcwd() + '/data/' + load
-    srl_reader = CustomSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()})
-    test_dataset = srl_reader.subsampled_read(test_datapath)
-    test_instances = [i for i in test_dataset]
-elif load in ['failed', 'fixed', 'gzero']:
-    test_instances = load_and_deserialize(load)
+def main():
+    args = get_args()
+    print(args)
+    # program arguments
+    load = args.load
+    store = args.store
+    # hyper-params for gradient inference
+    regularization = args.a
+    learning_rate = args.l
+    inference_iterations = args.i
 
-vocab = Vocabulary.from_instances(test_instances)
-iterator = BasicIterator(batch_size=1)
-iterator.index_with(vocab)
+    # load data samples
+    instances = []
+    # load from data files
+    if load in ['test', 'development', 'train', 'selected']:
+        datapath = os.getcwd() + '/data/' + load
+        srl_reader = CustomSrlReader(token_indexers={"elmo": ELMoTokenCharactersIndexer()})
+        test_dataset = srl_reader.subsampled_read(datapath)
+        instances = [i for i in test_dataset]
+    # load from pickle files
+    elif load in ['failed', 'fixed', 'gzero']:
+        instances = load_and_deserialize(load)
+    # init vocabulary and iterator
+    vocab = Vocabulary.from_instances(instances)
+    iterator = BasicIterator(batch_size=1)
+    iterator.index_with(vocab)
 
-# load pre-trained model
-archive = load_archive("srl-model-2018.05.25.tar.gz")
-original_predictor = Predictor.from_archive(archive)
-model = CustomSemanticRoleLabeler.from_srl(original_predictor._model)
+    # load pre-trained model
+    archive = load_archive("srl-model-2018.05.25.tar.gz")
+    original_predictor = Predictor.from_archive(archive)
+    model = CustomSemanticRoleLabeler.from_srl(original_predictor._model)
 
-
-def gbi():
+    # invoke inference method
     gbi = GradientBasedInference(model=model,
                                  learning_rate=learning_rate,
                                  alpha=regularization,
                                  store=store)
-    for _input in iterator(test_instances, num_epochs=1):
-        y_hat = gbi.gradient_inference(_input, iterations=inference_iterations,
-                                       num_samples=len(test_instances))
+    for instance in iterator(instances, num_epochs=1):
+        y_hat = gbi.gradient_inference(instance, iterations=inference_iterations,
+                                       num_samples=len(instances))
         gbi.print_stats()
-
-
-def main():
-    gbi()
 
 
 if __name__ == '__main__':
