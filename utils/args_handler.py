@@ -14,6 +14,7 @@ def get_args():
     parser.add_argument('-l', action='store', default=1, type=float, help="learning rate")
     parser.add_argument('-i', action='store', default=15, type=int, help="number of gradient inference iterations")
     parser.add_argument('-a', action='store', default=0, type=float, help="regularization parameter")
+    parser.add_argument('-v', action='store_true', help="verbose mode while computing g")
     args = parser.parse_args()
 
     return args

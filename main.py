@@ -19,6 +19,7 @@ def main():
     # program arguments
     load = args.load
     store = args.store
+    verbose = args.v
     # hyper-params for gradient inference
     regularization = args.a
     learning_rate = args.l
@@ -52,7 +53,7 @@ def main():
                                  store=store)
     for instance in iterator(instances, num_epochs=1):
         y_hat = gbi.gradient_inference(instance, iterations=inference_iterations,
-                                       num_samples=len(instances), verbose=True)
+                                       num_samples=len(instances), verbose=verbose)
         gbi.print_stats()
 
 
