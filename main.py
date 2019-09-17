@@ -34,8 +34,12 @@ def main():
         test_dataset = srl_reader.subsampled_read(datapath)
         instances = [i for i in test_dataset]
     # load from pickle files
-    elif load in ['failed', 'fixed', 'gzero']:
-        instances = load_and_deserialize(load)
+    elif load in ['failed', 'fixed', 'gzero', 'fixed+failed']:
+        if load == 'fixed+failed':
+            instances = load_and_deserialize('fixed')
+            instances += load_and_deserialize('failed')
+        else:
+            instances = load_and_deserialize(load)
     # init vocabulary and iterator
     vocab = Vocabulary.from_instances(instances)
     iterator = BasicIterator(batch_size=1)
