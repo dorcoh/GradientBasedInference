@@ -2,9 +2,9 @@ import os
 from timeit import default_timer as timer
 
 learning_rates = [1e-3, 1e-1, 1e0, 1e1, 1e2, 1e3, 1e4]
-iterations = [15, 30, 45, 60]
-regularization = [1e-3, 1e-5, 1e-7, 1e-9, 1e-11]
-data = 'failed'
+iterations = [15, 30, 45]
+regularization = [1e-3, 1e-7, 1e-9, 1e-11, 0]
+data = 'fixed+failed'
 
 if not os.path.exists('logs_exp_one'):
     os.makedirs('logs_exp_one')
