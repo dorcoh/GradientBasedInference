@@ -13,10 +13,13 @@ if not os.path.exists('logs_exp_one'):
 for i in iterations:
     for l in learning_rates:
         for r in regularization:
+            # skip done exps
+            if l == 1e-3 and r == 1e-3 and i == 15:
+                continue
             start = timer()
             params = (data, l, r, i)
             print("Exp ", params)
-            command = "python -u main.py --load %s -l %.20f -a %.20f -i %d " % params
+            command = "python -u main.py --load %s -l %.20f -a %.20f -i %d -c " % params
             command += "> logs_exp_one/out_lr_%.20f_reg_%.20f_it_%d " % (l, r, i)
             print(command)
             os.system(command)
