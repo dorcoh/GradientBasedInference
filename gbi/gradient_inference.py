@@ -63,11 +63,20 @@ class GradientBasedInference:
         """regularization: normalized difference between original and new weights"""
         reg = torch.tensor(0.0)
         norm = torch.tensor(0.0)
+        diff = torch.tensor(0.0)
 
         if self.alpha == 0:
             return reg
 
+        if self.enable_cuda:
+            reg = reg.to(self.device)
+            norm = norm.to(self.device)
+            diff = diff.to(self.device)
+
         for orig_param, new_param in zip(self.original_weights, self.model.parameters()):
+            if self.enable_cuda:
+                orig_param = orig_param.to(self.device)
+                new_param = new_param.to(self.device)
             orig_flat = orig_param.reshape(-1)
             new_flat = new_param.reshape(-1)
             diff = torch.abs(orig_flat-new_flat)
