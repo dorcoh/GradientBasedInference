@@ -14,10 +14,12 @@ class GradientBasedInference:
                  # regularization parameter
                  alpha: float = 0,
                  # store instances groups
-                 store: bool = True
+                 store: bool = True,
+                 enable_cuda: bool = False,
                  ) -> None:
 
         self.alpha = alpha
+        self.enable_cuda = enable_cuda
         self.model_copy = deepcopy(model)
         self.model = None
         self.original_weights = [p for p in self.model_copy.parameters()]
@@ -105,6 +107,8 @@ class GradientBasedInference:
         i = 0
         # revert to original model and init optimizer
         self.model = deepcopy(self.model_copy)
+        if self.enable_cuda and torch.cuda.is_available():
+            self.model = self.model.cuda(0)
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         y_hat = None
         while i < iterations:

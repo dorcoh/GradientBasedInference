@@ -24,6 +24,7 @@ def main():
     regularization = args.a
     learning_rate = args.l
     inference_iterations = args.i
+    enable_cuda = args.c
 
     # load data samples
     instances = []
@@ -54,7 +55,8 @@ def main():
     gbi = GradientBasedInference(model=model,
                                  learning_rate=learning_rate,
                                  alpha=regularization,
-                                 store=store)
+                                 store=store,
+                                 enable_cuda=enable_cuda)
     for instance in iterator(instances, num_epochs=1):
         y_hat = gbi.gradient_inference(instance, iterations=inference_iterations,
                                        num_samples=len(instances), verbose=verbose)

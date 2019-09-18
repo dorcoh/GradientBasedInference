@@ -15,6 +15,7 @@ def get_args():
     parser.add_argument('-i', action='store', default=15, type=int, help="number of gradient inference iterations")
     parser.add_argument('-a', action='store', default=0, type=float, help="regularization parameter")
     parser.add_argument('-v', action='store_true', help="verbose mode while computing g")
+    parser.add_argument('-c', action='store_true', help="enable cuda support")
     args = parser.parse_args()
 
     return args
