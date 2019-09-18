@@ -91,6 +91,8 @@ class GradientBasedInference:
 
         unbatched_likelihood = likelihood.view(likelihood.shape[2], likelihood.shape[1])
         # scale max likelihood with G and compute constraint loss
+        if self.enable_cuda:
+            g_result = g_result.to(self.device)
         constraint_loss = torch.sum(unbatched_likelihood * g_result)
 
         reg = self._compute_regularization()
