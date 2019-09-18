@@ -42,6 +42,9 @@ class GradientBasedInference:
         # store pickled list of instances groups
         self.instances_store = InstanceStore(disabled=not store)
 
+        # cuda support
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def _infer(self, x):
         # Set to evaluate mode
         self.model.eval()
@@ -108,7 +111,11 @@ class GradientBasedInference:
         # revert to original model and init optimizer
         self.model = deepcopy(self.model_copy)
         if self.enable_cuda and torch.cuda.is_available():
-            self.model = self.model.cuda(0)
+            cuda_device = 0
+            self.model = self.model.cuda(cuda_device)
+            x['tokens']['elmo'] = x['tokens']['elmo'].to(self.device)
+            x['verb_indicator'] = x['verb_indicator'].to(self.device)
+            x['tags'] = x['tags'].to(self.device)
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         y_hat = None
         while i < iterations:
