@@ -25,6 +25,7 @@ def main():
     learning_rate = args.l
     inference_iterations = args.i
     enable_cuda = args.c
+    pickle_path = args.p
 
     # load data samples
     instances = []
@@ -37,10 +38,10 @@ def main():
     # load from pickle files
     elif load in ['failed', 'fixed', 'gzero', 'fixed+failed']:
         if load == 'fixed+failed':
-            instances = load_and_deserialize('fixed')
-            instances += load_and_deserialize('failed')
+            instances = load_and_deserialize('fixed', pickle_path)
+            instances += load_and_deserialize('failed', pickle_path)
         else:
-            instances = load_and_deserialize(load)
+            instances = load_and_deserialize(load, pickle_path)
     # init vocabulary and iterator
     vocab = Vocabulary.from_instances(instances)
     iterator = BasicIterator(batch_size=1)

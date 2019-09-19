@@ -1,5 +1,5 @@
 import jsonpickle
-
+import os.path
 from allennlp.data import Token
 from allennlp.data.token_indexers import ELMoTokenCharactersIndexer
 
@@ -19,8 +19,10 @@ def deserialize(line):
     return inst
 
 
-def load_and_deserialize(filename):
-    """load serialized instances from file"""
+def load_and_deserialize(filename, path=None):
+    """load serialized instances from file, path is relative to root"""
+    if path is not None:
+        filename = os.path.join(path, filename)
     with open(filename, 'r') as handle:
         lines = handle.readlines()
 
