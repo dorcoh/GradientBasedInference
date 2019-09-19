@@ -16,7 +16,7 @@ for i in iterations:
         for r in regularization:
             for path in pickle_paths:
                 # skip baselines
-                if l == 1e01 and r == 0 and i == 15:
+                if l == 1e0 and r == 0.0 and i == 15:
                     continue
                 start = timer()
                 params = (data, l, r, i, path)
